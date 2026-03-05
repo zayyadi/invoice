@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: invoice-postgres
+    environment:
+      POSTGRES_USER: invoice
+      POSTGRES_PASSWORD: invoice
+      POSTGRES_DB: invoice_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: invoice-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/media:/app/media
+    depends_on:
+      - postgres
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  telegram-bot:
+    build: ./backend
+    container_name: invoice-telegram-bot
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/media:/app/media
+    depends_on:
+      - postgres
+    command: sh -c "alembic upgrade head && python -m app.bot.telegram_bot"
+
+  frontend:
+    build: ./frontend
+    container_name: invoice-frontend
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

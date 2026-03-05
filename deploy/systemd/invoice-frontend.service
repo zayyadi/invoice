@@ -1,0 +1,18 @@
+[Unit]
+Description=Invoice Next.js Frontend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/invoice/frontend
+EnvironmentFile=/opt/invoice/frontend/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/env npm run start -- -H 127.0.0.1 -p 3000
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

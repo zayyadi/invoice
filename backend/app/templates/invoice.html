@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice</title>
+  <style>
+    body {
+      font-family: DejaVu Sans, sans-serif;
+      color: #1f2937;
+      margin: 24px;
+      font-size: 14px;
+    }
+    .header {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-bottom: 24px;
+    }
+    .header-left {
+      width: 72%;
+      vertical-align: top;
+      padding-right: 12px;
+    }
+    .header-right {
+      width: 28%;
+      vertical-align: top;
+      text-align: right;
+    }
+    .logo {
+      max-width: 180px;
+      max-height: 72px;
+      object-fit: contain;
+    }
+    .meta h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .meta p {
+      margin: 6px 0;
+      color: #4b5563;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .bill-to {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+    .bill-to-title {
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6b7280;
+    }
+    .bill-to p {
+      margin: 4px 0;
+      color: #111827;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    thead th {
+      border-bottom: 2px solid #111827;
+      text-align: left;
+      padding: 10px 8px;
+      font-weight: 700;
+    }
+    tbody td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 10px 8px;
+    }
+    .right {
+      text-align: right;
+    }
+    .totals {
+      margin-top: 18px;
+      width: 360px;
+      margin-left: auto;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+    }
+    .grand {
+      font-weight: 700;
+      font-size: 16px;
+      border-top: 1px solid #d1d5db;
+      padding-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <table class="header">
+    <tr>
+      <td class="header-left">
+        <div class="meta">
+          <h1>Invoice #{{ invoice.invoice_number }}</h1>
+          <p><strong>Issue Date:</strong> {{ invoice.issue_date }}</p>
+          <p><strong>Due Date:</strong> {{ invoice.due_date }}</p>
+          <div class="bill-to">
+            <p class="bill-to-title">Bill To</p>
+            <p><strong>Name:</strong> {{ invoice.customer_name }}</p>
+            {% if invoice.customer_email %}
+              <p><strong>Email:</strong> {{ invoice.customer_email }}</p>
+            {% endif %}
+          </div>
+        </div>
+      </td>
+      <td class="header-right">
+        {% if logo_abs_url %}
+          <img src="{{ logo_abs_url }}" alt="Company Logo" class="logo" />
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Qty</th>
+        <th>Unit ({{ invoice.currency }})</th>
+        <th class="right">Line Total ({{ invoice.currency }})</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in invoice.items %}
+      <tr>
+        <td>{{ item.description }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ "%.2f"|format(item.unit_price) }}</td>
+        <td class="right">{{ "%.2f"|format(item.line_total) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row"><span>Subtotal</span><span>{{ invoice.currency }} {{ "%.2f"|format(invoice.subtotal) }}</span></div>
+    <div class="totals-row"><span>Tax</span><span>{{ invoice.currency }} {{ "%.2f"|format(invoice.tax_amount) }}</span></div>
+    <div class="totals-row grand"><span>Total</span><span>{{ invoice.currency }} {{ "%.2f"|format(invoice.total_amount) }}</span></div>
+  </div>
+
+  {% if invoice.notes %}
+    <div style="margin-top: 20px;">
+      <strong>Notes</strong>
+      <p>{{ invoice.notes }}</p>
+    </div>
+  {% endif %}
+</body>
+</html>
