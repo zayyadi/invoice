@@ -2,6 +2,7 @@
 
 Production-oriented full-stack invoice generator with:
 - Invoice creation (NGN/Naira)
+- Bill From issuer/contractor details on invoices
 - Secure logo upload
 - Invoice export as PDF and PNG/JPG
 - Telegram bot invoice wizard (PDF/PNG/JPG output)
@@ -54,6 +55,7 @@ python -m app.bot.telegram_bot
 
 Conversation flow asks for:
 - invoice number
+- bill from / issuer details
 - customer details
 - issue/due dates
 - tax rate

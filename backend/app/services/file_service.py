@@ -1,5 +1,6 @@
 import os
 import uuid
+from uuid import UUID
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -12,7 +13,11 @@ ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".svg"}
 MAX_LOGO_BYTES = 2 * 1024 * 1024
 
 
-async def save_logo_for_invoice(db: Session, invoice_id: str, upload: UploadFile) -> str:
+async def save_logo_for_invoice(
+    db: Session, invoice_id: str, upload: UploadFile, user_id: UUID | None = None
+) -> str:
+    invoice = get_invoice_or_404(db, invoice_id, user_id)
+
     content_type = upload.content_type or ""
     extension = os.path.splitext(upload.filename or "")[1].lower()
 
@@ -30,7 +35,6 @@ async def save_logo_for_invoice(db: Session, invoice_id: str, upload: UploadFile
     with open(destination, "wb") as logo_file:
         logo_file.write(payload)
 
-    invoice = get_invoice_or_404(db, invoice_id)
     invoice.logo_path = f"/media/logos/{filename}"
     db.commit()
 

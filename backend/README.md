@@ -12,6 +12,16 @@ alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+## Run Checks
+
+```bash
+cd backend
+python scripts/check_backend.py
+```
+
+This compiles the application modules and runs the backend unittest suite with
+an isolated in-memory SQLite database.
+
 ## Run Telegram Bot
 
 Set in `backend/.env`:
@@ -30,3 +40,4 @@ python -m app.bot.telegram_bot
 ```
 
 The bot collects invoice details and returns PDF or image (PNG/JPG).
+It now includes Bill From / issuer details before the customer details.

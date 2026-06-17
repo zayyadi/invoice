@@ -24,9 +24,17 @@ from app.core.media import configure_media_dirs
 from app.schemas.invoice import InvoiceCreate, InvoiceItemCreate
 from app.services.export_service import generate_image, generate_pdf
 from app.services.invoice_service import create_invoice, get_invoice_or_404
+from app.services.notification_service import format_whatsapp_message, build_whatsapp_url
 
 (
     INVOICE_NUMBER,
+    ISSUER_NAME,
+    ISSUER_EMAIL,
+    ISSUER_PHONE,
+    ISSUER_ADDRESS,
+    PAYMENT_BANK_NAME,
+    PAYMENT_ACCOUNT_NUMBER,
+    PAYMENT_ACCOUNT_NAME,
     CUSTOMER_NAME,
     CUSTOMER_EMAIL,
     ISSUE_DATE,
@@ -39,7 +47,12 @@ from app.services.invoice_service import create_invoice, get_invoice_or_404
     NOTES,
     LOGO,
     OUTPUT_FORMAT,
-) = range(13)
+    SHARE_INVOICE_ID,
+    SHARE_METHOD,
+    SHARE_EMAIL,
+    SHARE_PHONE,
+    SHARE_TELEGRAM_ID,
+) = range(25)
 
 MAX_LOGO_BYTES = 2 * 1024 * 1024
 ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".svg"}
@@ -92,7 +105,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     await update.message.reply_text(
         "Invoice wizard started. Type /cancel any time to stop.\n\n"
-        "Step 1/10: Enter invoice number (example: INV-1001).",
+        "Step 1/17: Enter invoice number (example: INV-1001).",
         reply_markup=ReplyKeyboardRemove(),
     )
     return INVOICE_NUMBER
@@ -111,7 +124,56 @@ async def invoice_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return INVOICE_NUMBER
 
     _draft(context)["invoice_number"] = text
-    await update.message.reply_text("Step 2/10: Enter Bill To name (person who should pay):")
+    await update.message.reply_text("Step 2/17: Enter Bill From name/business name, or type `skip`.")
+    return ISSUER_NAME
+
+
+async def issuer_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    _draft(context)["issuer_name"] = None if text.lower() == "skip" else text
+    await update.message.reply_text("Step 3/17: Enter Bill From email, or type `skip`.")
+    return ISSUER_EMAIL
+
+
+async def issuer_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    _draft(context)["issuer_email"] = None if text.lower() == "skip" else text
+    await update.message.reply_text("Step 4/17: Enter Bill From phone, or type `skip`.")
+    return ISSUER_PHONE
+
+
+async def issuer_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    _draft(context)["issuer_phone"] = None if text.lower() == "skip" else text
+    await update.message.reply_text("Step 5/17: Enter Bill From address, or type `skip`.")
+    return ISSUER_ADDRESS
+
+
+async def issuer_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    _draft(context)["issuer_address"] = None if text.lower() == "skip" else text
+    await update.message.reply_text("Step 6/17: Enter payment bank name, or type `skip`.")
+    return PAYMENT_BANK_NAME
+
+
+async def payment_bank_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    _draft(context)["payment_bank_name"] = None if text.lower() == "skip" else text
+    await update.message.reply_text("Step 7/17: Enter payment account number, or type `skip`.")
+    return PAYMENT_ACCOUNT_NUMBER
+
+
+async def payment_account_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    _draft(context)["payment_account_number"] = None if text.lower() == "skip" else text
+    await update.message.reply_text("Step 8/17: Enter payment account name, or type `skip`.")
+    return PAYMENT_ACCOUNT_NAME
+
+
+async def payment_account_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    _draft(context)["payment_account_name"] = None if text.lower() == "skip" else text
+    await update.message.reply_text("Step 9/17: Enter Bill To name (person who should pay):")
     return CUSTOMER_NAME
 
 
@@ -122,14 +184,14 @@ async def customer_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         return CUSTOMER_NAME
 
     _draft(context)["customer_name"] = text
-    await update.message.reply_text("Step 3/10: Enter Bill To email or type `skip`.")
+    await update.message.reply_text("Step 10/17: Enter Bill To email or type `skip`.")
     return CUSTOMER_EMAIL
 
 
 async def customer_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     text = (update.message.text or "").strip()
     _draft(context)["customer_email"] = None if text.lower() == "skip" else text
-    await update.message.reply_text("Step 4/10: Enter issue date in YYYY-MM-DD format:")
+    await update.message.reply_text("Step 11/17: Enter issue date in YYYY-MM-DD format:")
     return ISSUE_DATE
 
 
@@ -142,7 +204,7 @@ async def issue_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ISSUE_DATE
 
     _draft(context)["issue_date"] = parsed
-    await update.message.reply_text("Step 5/10: Enter due date in YYYY-MM-DD format:")
+    await update.message.reply_text("Step 12/17: Enter due date in YYYY-MM-DD format:")
     return DUE_DATE
 
 
@@ -160,7 +222,7 @@ async def due_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return DUE_DATE
 
     draft["due_date"] = parsed
-    await update.message.reply_text("Step 6/10: Enter tax rate (example: 7.5, or 0):")
+    await update.message.reply_text("Step 13/17: Enter tax rate (example: 7.5, or 0):")
     return TAX_RATE
 
 
@@ -175,7 +237,7 @@ async def tax_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return TAX_RATE
 
     _draft(context)["tax_rate"] = value
-    await update.message.reply_text("Step 7/10: Enter first item description:")
+    await update.message.reply_text("Step 14/17: Enter first item description:")
     return ITEM_DESCRIPTION
 
 
@@ -235,7 +297,7 @@ async def add_another_item(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text("Enter next item description:", reply_markup=ReplyKeyboardRemove())
         return ITEM_DESCRIPTION
     if text == "no":
-        await update.message.reply_text("Step 8/10: Enter notes or type `skip`:", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("Step 15/17: Enter notes or type `skip`:", reply_markup=ReplyKeyboardRemove())
         return NOTES
 
     await update.message.reply_text("Please reply with `yes` or `no`.")
@@ -247,14 +309,15 @@ async def notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     _draft(context)["notes"] = None if text.lower() == "skip" else text
 
     await update.message.reply_text(
-        "Step 9/10: Send company logo as image/document, or type `skip`.")
+        "Step 16/17: Send company logo as image/document, or type `skip`."
+    )
     return LOGO
 
 
 async def logo_skip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     keyboard = [["pdf", "png", "jpg"]]
     await update.message.reply_text(
-        "Step 10/10: Choose export format (pdf/png/jpg):",
+        "Step 17/17: Choose export format (pdf/png/jpg):",
         reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True),
     )
     return OUTPUT_FORMAT
@@ -289,7 +352,7 @@ async def logo_upload(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     keyboard = [["pdf", "png", "jpg"]]
     await update.message.reply_text(
-        "Step 10/10: Choose export format (pdf/png/jpg):",
+        "Step 17/17: Choose export format (pdf/png/jpg):",
         reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True),
     )
     return OUTPUT_FORMAT
@@ -308,6 +371,13 @@ async def output_format(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     payload = InvoiceCreate(
         invoice_number=draft["invoice_number"],
+        issuer_name=draft.get("issuer_name"),
+        issuer_email=draft.get("issuer_email"),
+        issuer_phone=draft.get("issuer_phone"),
+        issuer_address=draft.get("issuer_address"),
+        payment_bank_name=draft.get("payment_bank_name"),
+        payment_account_number=draft.get("payment_account_number"),
+        payment_account_name=draft.get("payment_account_name"),
         customer_name=draft["customer_name"],
         customer_email=draft.get("customer_email"),
         issue_date=draft["issue_date"],
@@ -363,8 +433,127 @@ async def output_format(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return ConversationHandler.END
 
 
+async def share_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if not _is_allowed_user(update.effective_user.id if update.effective_user else 0):
+        await update.message.reply_text("Access denied.")
+        return ConversationHandler.END
+
+    await update.message.reply_text("Enter invoice ID to share:")
+    return SHARE_INVOICE_ID
+
+
+async def share_invoice_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    invoice_id = (update.message.text or "").strip()
+    if not invoice_id:
+        await update.message.reply_text("Invoice ID cannot be empty. Enter invoice ID:")
+        return SHARE_INVOICE_ID
+
+    with SessionLocal() as db:
+        invoice = get_invoice_or_404(db, invoice_id)
+        context.user_data["share_invoice_id"] = invoice_id
+        context.user_data["share_invoice_number"] = invoice.invoice_number
+
+    keyboard = [["email", "whatsapp", "telegram"]]
+    await update.message.reply_text(
+        "How would you like to share? Choose method:",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True),
+    )
+    return SHARE_METHOD
+
+
+async def share_method(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    method = (update.message.text or "").strip().lower()
+    context.user_data["share_method"] = method
+
+    if method == "email":
+        await update.message.reply_text(
+            "Email sharing is currently disabled.",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        context.user_data.pop("share_invoice_id", None)
+        context.user_data.pop("share_invoice_number", None)
+        context.user_data.pop("share_method", None)
+        return ConversationHandler.END
+    if method == "whatsapp":
+        await update.message.reply_text(
+            "Enter recipient phone number (with country code, e.g. +2348012345678):",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return SHARE_PHONE
+    if method == "telegram":
+        await update.message.reply_text(
+            "Enter recipient Telegram chat ID (numeric):",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return SHARE_TELEGRAM_ID
+
+    keyboard = [["email", "whatsapp", "telegram"]]
+    await update.message.reply_text(
+        "Invalid method. Choose email, whatsapp, or telegram:",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True),
+    )
+    return SHARE_METHOD
+
+
+async def share_email_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text("Email sharing is currently disabled.")
+
+    context.user_data.pop("share_invoice_id", None)
+    context.user_data.pop("share_invoice_number", None)
+    context.user_data.pop("share_method", None)
+    return ConversationHandler.END
+
+
+async def share_phone_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    phone = (update.message.text or "").strip()
+    if not phone:
+        await update.message.reply_text("Phone cannot be empty. Enter phone with country code:")
+        return SHARE_PHONE
+
+    invoice_number = context.user_data["share_invoice_number"]
+    msg = format_whatsapp_message(invoice_number, "NGN", "see invoice")
+    url = build_whatsapp_url(phone, msg)
+    await update.message.reply_text(
+        f"WhatsApp link ready:\n[Send to {phone}]({url})",
+        parse_mode="Markdown",
+    )
+
+    context.user_data.pop("share_invoice_id", None)
+    context.user_data.pop("share_invoice_number", None)
+    context.user_data.pop("share_method", None)
+    return ConversationHandler.END
+
+
+async def share_telegram_id_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    text = (update.message.text or "").strip()
+    try:
+        chat_id = int(text)
+    except ValueError:
+        await update.message.reply_text("Invalid chat ID. Enter a numeric Telegram chat ID:")
+        return SHARE_TELEGRAM_ID
+
+    invoice_id = context.user_data["share_invoice_id"]
+    invoice_number = context.user_data["share_invoice_number"]
+
+    try:
+        from app.services.export_service import generate_pdf
+        with SessionLocal() as db:
+            pdf_path = generate_pdf(db, invoice_id)
+        with open(pdf_path, "rb") as f:
+            await context.bot.send_document(chat_id=chat_id, document=f, caption=f"Invoice {invoice_number}")
+        await update.message.reply_text(f"Invoice sent to chat {chat_id}.")
+    except Exception as exc:
+        logger.exception("Telegram forward failed: %s", exc)
+        await update.message.reply_text(f"Failed to forward: {exc}")
+
+    context.user_data.pop("share_invoice_id", None)
+    context.user_data.pop("share_invoice_number", None)
+    context.user_data.pop("share_method", None)
+    return ConversationHandler.END
+
+
 async def unknown_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Use /start to create an invoice, or /cancel to stop.")
+    await update.message.reply_text("Use /start to create an invoice, /share to send one, or /cancel to stop.")
 
 
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -385,6 +574,15 @@ def build_application() -> Application:
         entry_points=[CommandHandler("start", start)],
         states={
             INVOICE_NUMBER: [MessageHandler(filters.TEXT & ~filters.COMMAND, invoice_number)],
+            ISSUER_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, issuer_name)],
+            ISSUER_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, issuer_email)],
+            ISSUER_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, issuer_phone)],
+            ISSUER_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, issuer_address)],
+            PAYMENT_BANK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, payment_bank_name)],
+            PAYMENT_ACCOUNT_NUMBER: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, payment_account_number)
+            ],
+            PAYMENT_ACCOUNT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, payment_account_name)],
             CUSTOMER_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, customer_name)],
             CUSTOMER_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, customer_email)],
             ISSUE_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, issue_date)],
@@ -405,7 +603,21 @@ def build_application() -> Application:
         allow_reentry=True,
     )
 
+    share_conversation = ConversationHandler(
+        entry_points=[CommandHandler("share", share_start)],
+        states={
+            SHARE_INVOICE_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, share_invoice_id)],
+            SHARE_METHOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, share_method)],
+            SHARE_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, share_email_step)],
+            SHARE_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, share_phone_step)],
+            SHARE_TELEGRAM_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, share_telegram_id_step)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True,
+    )
+
     app.add_handler(conversation)
+    app.add_handler(share_conversation)
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, unknown_message))
     app.add_error_handler(on_error)

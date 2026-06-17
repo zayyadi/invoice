@@ -1,4 +1,5 @@
 import os
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -7,7 +8,9 @@ from app.services.invoice_service import get_invoice_or_404
 from app.services.render_service import render_invoice_html
 
 
-def generate_pdf(db: Session, invoice_id: str) -> str:
+def generate_pdf(db: Session, invoice_id: str, user_id: UUID | None = None) -> str:
+    invoice = get_invoice_or_404(db, invoice_id, user_id)
+
     try:
         from weasyprint import HTML
     except ModuleNotFoundError as exc:
@@ -15,7 +18,6 @@ def generate_pdf(db: Session, invoice_id: str) -> str:
             "PDF export dependency missing: install with `pip install weasyprint`."
         ) from exc
 
-    invoice = get_invoice_or_404(db, invoice_id)
     html = render_invoice_html(invoice)
     os.makedirs(settings.exports_dir, exist_ok=True)
     output_path = os.path.join(settings.exports_dir, f"{invoice_id}.pdf")
@@ -23,7 +25,11 @@ def generate_pdf(db: Session, invoice_id: str) -> str:
     return output_path
 
 
-async def generate_image(db: Session, invoice_id: str, fmt: str = "png") -> str:
+async def generate_image(
+    db: Session, invoice_id: str, user_id: UUID | None = None, fmt: str = "png"
+) -> str:
+    invoice = get_invoice_or_404(db, invoice_id, user_id)
+
     try:
         from playwright.async_api import async_playwright
     except ModuleNotFoundError as exc:
@@ -32,7 +38,6 @@ async def generate_image(db: Session, invoice_id: str, fmt: str = "png") -> str:
             "and run `playwright install chromium`."
         ) from exc
 
-    invoice = get_invoice_or_404(db, invoice_id)
     html = render_invoice_html(invoice)
     os.makedirs(settings.exports_dir, exist_ok=True)
     output_path = os.path.join(settings.exports_dir, f"{invoice_id}.{fmt}")

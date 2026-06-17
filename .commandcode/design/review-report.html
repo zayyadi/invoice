@@ -1,0 +1,219 @@
+# Aura Invoice — Design Review Report
+
+<!-- MODEL-ONLY BOUNDARY:
+This file is a report template only for smell, checkup, and review.
+Do not use this layout, dark report aesthetic, inline HTML, score block,
+corner boxes, or section structure as inspiration for product UI,
+landing pages, dashboards, app screens, components, or generated interfaces.
+Use it only when creating the required report artifact.
+Do not copy this comment into generated output.
+-->
+
+**Generated with CommandCode** • `2026-05-27`
+---
+
+<div style="background:#111; border:1px solid #222; padding:2.5rem; border-radius:0; position:relative; margin:2rem 0;">
+
+<div style="position:absolute; top:-1px; left:-1px; width:20px; height:20px; border:1px solid #222; background:#000;"></div>
+<div style="position:absolute; top:-1px; right:-1px; width:20px; height:20px; border:1px solid #222; background:#000;"></div>
+<div style="position:absolute; bottom:-1px; left:-1px; width:20px; height:20px; border:1px solid #222; background:#000;"></div>
+<div style="position:absolute; bottom:-1px; right:-1px; width:20px; height:20px; border:1px solid #222; background:#000;"></div>
+
+### // DESIGN REVIEW
+
+# Aura Invoice Generator
+
+<div style="float:right; text-align:right; margin-top:-80px;">
+**<span style="font-size:3.5rem">32</span><span style="font-size:1.8rem; color:#666">/50</span>**  
+<span style="color:#fbbf24">SOLID FOUNDATIONS, NEEDS FOCUSED REFINEMENT</span>
+</div>
+
+<br clear="all">
+
+---
+
+### // TL;DR
+
+**> A distinctive warm rose-and-teal invoicing app with premium surface layering and glassmorphism headers. Let down by a DESIGN.md that describes a completely different product, copy-pasted header JSX across 10 pages, bare-text loading states everywhere, and unreadably small all-caps buttons.**
+
+<span style="color:#fbbf24">Start with `/design setup` to reconcile DESIGN.md with the actual theme. Then `/design relayout` to fix the header duplication and `/design interaction` to add real loading states.</span>
+
+---
+
+### // GUT REACTION
+
+The warm rose palette (`#a1354c` burgundy) against soft white backgrounds creates a genuinely distinctive invoicing experience. The translucent card layering (90-94% opacity) and `backdropFilter: blur(18px)` headers feel premium and authored. The teal tertiary (`#36645c`) for success states is a fresh, trusted counterpoint.
+
+But the DESIGN.md describes an entirely different product — a dark navy corporate finance dashboard with Manrope headlines and a blue-50 primary. That disconnect is the single biggest credibility issue. The design doc says one thing; the code says another. One of them needs to change.
+
+The biggest design debt isn't visual: it's the sticky header copy-pasted verbatim across 10 pages, the 12px all-caps buttons that strain readability, the bare "Loading..." text on every page transition, and the missing Manrope font specified for headlines.
+
+---
+
+### // THE FIVE LENSES
+
+**First Impression — 7/10**
+
+Arriving at `/auth/login` shows a centered card on a warm gradient background with just "Sign In" text. No logo, no brand mark — it reads as generic. Once authenticated, the dashboard's four summary cards, overdue alert, and layered card hierarchy establish real presence. The new-invoice two-panel workspace (left form, right preview) is the strongest single-page composition.
+
+<span style="color:#fbbf24">Missing auth branding keeps the first touchpoint below the standard set by the rest of the app.</span>
+
+**Hierarchy — 7/10**
+
+The section-label → section-title → fields rhythm is consistent and scannable. Dashboard summary cards lead the eye to metrics before detail. The two-panel invoice creation workspace has clear left/right responsibilities. InvoicePreview has the best component-level hierarchy: status → number → dates → parties → line items → summary.
+
+But `h3` and `h4` are identical in the theme (18px/600). Buttons at 12px compete poorly against 16-18px body text. Dashboard's CSS bar chart has no labels or interaction. Auth pages have only two typographic levels instead of three.
+
+**Color Voice — 8/10**
+
+Every color has a clear, consistent role. Primary (burgundy) for actions, secondary (mauve) for supporting UI, tertiary (teal) for success, red for error. The surface opacity system creates depth without heavy shadows. Input focus rings use a 3px branded glow.
+
+The warning color (`#feb6c0` pink) doesn't scan as "caution" — pink is culturally associated with love or error, not warning. An amber tone would communicate correctly. The `code.html` mockup uses a different palette entirely.
+
+**Type Voice — 5/10**
+
+Inter at 400-700 is a clean workhorse. Tabular number treatment (`fontFeatureSettings: '"tnum"'`) in InvoicePreview is a thoughtful detail.
+
+But DESIGN.md specifies Manrope for headlines and only Inter is loaded. Buttons are 12px ALL CAPS — physically small and hard to scan. The h3/h4 redundancy pollutes the theme. Body text varies between `body1` (18px), `body2` (16px), and raw `fontSize: 12` sx. The section-label pattern repeats raw sx 20+ times instead of using the `subtitle1` variant.
+
+<span style="color:#fbbf24">The system has no typographic voice — it's all Inter, with the most important actions (buttons) rendered at the smallest text size.</span>
+
+**Interaction Feel — 5/10**
+
+The button hover `translateY(-1px)` + shadow expansion is satisfying. Input focus glow is visible and branded. The status state machine correctly models transitions. Empty states are consistent across pages.
+
+But loading states are bare text everywhere. No skeleton loaders. No animated transitions between auth and dashboard. The sticky header is copy-pasted across 10 pages — a single change requires editing every page file. The "Share Invoice" button on the detail page has no onClick handler. The client detail page uses a local `getStatusColor()` function instead of the shared `StatusBadge` component.
+
+<span style="color:#fbbf24">The interaction gap between the polished InvoicePreview and the bare loading states is the widest quality delta in the app.</span>
+
+---
+
+### // HEURISTIC SCORES
+
+| #  | Heuristic                              | Score | Key Finding                          |
+|----|----------------------------------------|-------|--------------------------------------|
+| 1  | First Impression                       | 7/10  | Distinctive palette, no auth branding, DESIGN.md mismatch |
+| 2  | Hierarchy                              | 7/10  | Consistent section rhythm, h3/h4 redundancy, weak button presence |
+| 3  | Color Voice                            | 8/10  | Clear roles, depth layering works, warning color doesn't scan |
+| 4  | Type Voice                             | 5/10  | All Inter, 12px all-caps buttons, missing Manrope, inconsistent body |
+| 5  | Interaction Feel                       | 5/10  | Good hover/focus, bare loading states everywhere, duplicated header |
+
+---
+
+### // COGNITIVE LOAD AUDIT
+
+**4 / 8** — *MODERATE LOAD* ⚠️
+
+- ✅ Consistent section-label → title → fields rhythm creates predictable scanning
+- ✅ Color roles are stable and don't shift meaning between pages
+- ❌ Copy-pasted header on every page means 10 files to maintain one visual element
+- ❌ Loading states are bare text with no visual rhythm — each page invents its own
+- ❌ AI-generated form subtitles ("Define document identity and timing") add reading load without adding value
+- ❌ `code.html` and DESIGN.md describe different products — creates context-switching confusion
+
+**Recommended Next Modes**  
+`/design setup` `/design relayout` `/design interaction` `/design typeset`
+
+---
+
+### // WHAT'S WORKING
+
+**Warm Rose + Teal Palette**  
+The burgundy primary (`#a1354c`) paired with teal success states (`#36645c`) creates a genuinely uncommon color identity. It avoids every generic SaaS reflex. The tonal surface layer system (lowest → low → main → high → highest) creates real depth across cards, sections, and nested components.
+
+**New-Invoice Two-Panel Workspace**  
+The left form / right preview split with a descriptive hero section is the strongest UX composition. Form on the left structures input; preview on the right shows the client-facing document. After creation, the output panel gains LogoUploader, ExportButtons, and ShareModal. This flow is clear and purposeful.
+
+**InvoicePreview Component**  
+The most polished component in the app. CSS grid line-items table with tabular numbers, circular AccountBalance icon for payment details, teal-tinted notes section with tertiary colors, and a financial summary box with h1-sized total and PaymentsIcon watermark. The Unpaid badge (10px, 700 weight, 0.1em letter-spacing) is a confident detail.
+
+**Status State Machine**  
+`StatusActions` correctly models all valid transitions: draft → sent → viewed → paid/partial, with cancel paths. Each transition gets appropriate UI — send/pay/cancel buttons with semantic colors and confirmation dialogs where needed.
+
+**Glassmorphism Headers**  
+The `backdropFilter: blur(18px)` + `rgba(255,248,247,0.88)` sticky headers on every page create a polished, modern feel. The content scrolling beneath the translucent header adds premium depth without being trendy.
+
+**Consistent Empty States**  
+Every list page handles the zero-state with the same pattern: large muted icon (64px), h5 heading, descriptive body text, and a CTA button. This consistency builds trust even when there's nothing to show.
+
+---
+
+### // PRIORITY ISSUES
+
+**P0 — CRITICAL**  
+**DESIGN.md Describes a Different Product**  
+The design documentation specifies a dark navy corporate finance dashboard (`#0b1326` background, `#adc6ff` primary, Manrope headlines). The actual implementation is a warm light invoicing app (`#fff8f7` background, `#a1354c` primary, Inter only). This mismatch means the docs are either aspirational (and the code hasn't caught up) or obsolete (and need rewriting). Either path is valid, but the ambiguity makes every design decision ungrounded.
+
+> **FIX:** `/design setup` — Reconcile DESIGN.md with the actual warm light theme, or commit to retheming the app toward the dark corporate vision. Delete `code.html` if it's an artifact.
+
+**P0 — CRITICAL**  
+**Sticky Header Duplicated Across 10 Pages**  
+The identical 20+ lines of header JSX (`position: sticky`, `backdropFilter: "blur(18px)"`, `rgba(255,248,247,0.88)` background, border-bottom, Container wrapper) are copy-pasted into every authenticated page file. A design change to the header requires editing 10 files. Navigation patterns vary per page.
+
+> **FIX:** `/design relayout` — Extract into a shared `<AppShell>` or `<PageHeader>` component that accepts title, breadcrumbs, and action slots.
+
+**P1 — HIGH**  
+**Loading States Are Bare Text Everywhere**  
+Every page shows "Loading..." or "Loading invoice..." as plain centered text. No skeleton loaders, no animated placeholders, no progress indicators (except `LinearProgress` on dashboard). The transition from auth to dashboard flashes "Loading..." briefly.
+
+> **FIX:** `/design interaction` — Add MUI Skeleton components for card content, table rows, and form fields. Add a branded loading screen for the auth→dashboard transition.
+
+**P1 — HIGH**  
+**Buttons Are 12px All-Caps — Unreadably Small for Primary Actions**  
+The theme sets buttons to `fontSize: 12, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase"`. At min-height 44px, there is significant vertical padding around tiny text. "CREATE INVOICE" at 12px all-caps does not feel like a confident CTA. This is the weakest typographic decision in the system.
+
+> **FIX:** `/design typeset` — Increase button font to at least 14px. Consider dropping all-caps in favor of sentence case with slightly larger text, especially for primary CTAs.
+
+**P2 — MEDIUM**  
+**h3 and h4 Are Identical in Theme**  
+Both map to `fontSize: 18, fontWeight: 600`. `h4` appears unused. This is dead code that creates confusion about available hierarchy levels.
+
+> **FIX:** `/design typeset` — Remove `h4` override or differentiate it meaningfully (e.g., `fontSize: 20, fontWeight: 500`).
+
+**P2 — MEDIUM**  
+**"Share Invoice" Button on Detail Page Has No Handler**  
+The invoice detail page renders a full-width "Share Invoice" button that does nothing on click. The same button on the new-invoice page correctly opens `ShareModal`. This is a dead control on a high-traffic page.
+
+> **FIX:** `/design interaction` — Wire the ShareModal to the detail page's share button, same pattern as the new-invoice page.
+
+**P2 — MEDIUM**  
+**Warning Color Doesn't Communicate Caution**  
+`#feb6c0` is a soft pink. Culturally, pink reads as love, femininity, or error — not warning or caution. Used for "partial payment" status, it doesn't convey the intended urgency.
+
+> **FIX:** `/design recolor` — Switch warning to an amber or gold tone (e.g., `#e6a817` or similar warm yellow). Keep pink as a secondary accent if desired.
+
+**P3 — LOW**  
+**AI-Generated Section Subtitles in InvoiceForm**  
+"Define document identity and timing", "Establish the sending identity", "Capture the billing target", "Embed payment details" — these read as LLM-generated instructional prose. No designer writes copy that over-explains every section of a form.
+
+> **FIX:** Manually rewrite. Replace with concise labels: "Invoice details", "Your business", "Customer", "Payment info". Or remove subtitles entirely — the section labels already name each section.
+
+**P3 — LOW**  
+**Auth Pages Have No Branding**  
+The login and register pages show a centered card with text titles only. No logo, no branding, no favicon. The first touchpoint of the app is the least branded surface.
+
+> **FIX:** `/design surface` — Add the "A" logo mark above the card, add a favicon, consider a tagline or product name.
+
+**P3 — LOW**  
+**Manrope Specified but Never Loaded**  
+DESIGN.md specifies Manrope for headlines. The `layout.tsx` only loads Inter. Either load Manrope and apply it to h1-h3, or remove it from the design doc.
+
+> **FIX:** `/design typeset` or `/design setup` — Add Manrope Google Font link and apply to h1/h2/h3 variants, or remove from DESIGN.md.
+
+**P3 — LOW**  
+**SectionLabel Pattern Repeats Raw sx Instead of Using subtitle1 Variant**  
+The 12px uppercase label pattern appears 20+ times as raw `{ color: "text.secondary", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }` sx. The theme already defines `subtitle1` (14px/uppercase/0.05em). Either use `subtitle1` or create a dedicated `overline` variant.
+
+> **FIX:** `/design tokenize` — Create a dedicated theme variant or MUI `Typography` override. Replace all inline sx with the token.
+
+**P3 — LOW**  
+**code.html Artifact at Project Root**  
+A standalone Tailwind HTML mockup with its own color system and Material Symbols icons. It's close to but not identical to the MUI theme. This is either an earlier exploration or an AI generation that was never cleaned up.
+
+> **FIX:** Delete `code.html` and `stitch/code.html`, or move to a design-reference directory with a clear label.
+
+</div>
+
+---
+
+*Generated with CommandCode • 2026-05-27*

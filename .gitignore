@@ -31,3 +31,6 @@ wheels/
 alembic.ini
 uv.lock
 backend/alembic
+.omx/
+*.md
+DESIGN.md
